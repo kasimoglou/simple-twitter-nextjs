@@ -1,10 +1,26 @@
-import prisma from "../lib/prisma"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Avatar from "../components/Avatar";
-import Tweet from "../components/Tweet";
+import Tweets from "../components/Tweets";
 
-export default function Home({ tweets }) {
+export default function Home() {
+  const [isLoading, setLoading] = useState(false);
+  const [reload, setReload] = useState(false);
+  const [tweets, setTweets] = useState([]);
   const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    if (!reload) {
+      setLoading(true)
+    }
+
+    fetch('api/tweet')
+      .then((res) => res.json())
+      .then((data) => {
+        setTweets(data);
+        setLoading(false);
+        setReload(false);
+      })
+  }, [reload])
 
   const handleMessageChange = (evt) => {
     setMessage(evt.target.value)
@@ -12,14 +28,16 @@ export default function Home({ tweets }) {
 
   const handleTweetSubmit = async (evt) => {
     const body = { message };
+    setMessage('');
+
     await fetch('/api/tweet', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
     });
-    setMessage('');
-  }
 
+    setReload(true);
+  }
   return (
     <>
       <h1 className="pl-4 pr-4 font-bold text-lg">Home</h1>
@@ -32,19 +50,7 @@ export default function Home({ tweets }) {
         </div>
       </div>
       {/* Existing tweets area */}
-      <div>
-        {tweets.map(({ id, message }) => (
-          <Tweet key={id} message={message} />
-        ))}
-      </div>
+      <Tweets tweets={tweets} isLoading={isLoading} />
     </>
   )
-}
-
-export async function getServerSideProps() {
-  const tweets = await prisma.Tweet.findMany();
-
-  return {
-    props: { tweets }
-  }
 }
